@@ -63,7 +63,7 @@ def construct_parsing_tree(tree_text):
 
     return current_node
 
-def getRelations(tree):
+def get_relations(tree):
     if 'child' in tree:
         for child in tree['child']:
             if child==tree['head']:
@@ -80,16 +80,5 @@ def getRelations(tree):
                     yield tree['head'], head_of_child
                 else:
                     yield head_of_child, tree['head']
-            for r1, r2 in getRelations(child):
+            for r1, r2 in get_relations(child):
                 yield r1, r2
-
-raw_text = '我們都喜歡美麗的蝴蝶'
-parser = CKIPParser('USERNAME', 'PASSWORD')
-result = parser.process(raw_text)
-tree_text = result['result'][0]['tree']
-#tree_text = 'S(experiencer:NP(Head:Nhaa:我們)|quantity:Dab:都|Head:VK1:喜歡|goal:NP(property:V‧的(head:VH11:美麗|Head:DE:的)|Head:Nab:蝴蝶))'
-tree = construct_parsing_tree(tree_text)
-for r1, r2 in getRelations(tree):
-    print(r1['role'], r1['pos'], r1['term'])
-    print(r2['role'], r2['pos'], r2['term'])
-    print('-'*50)
