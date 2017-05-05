@@ -61,20 +61,24 @@ def construct_parsing_tree(tree_text):
 
 def get_relations(tree):
     if 'child' in tree:
+        # create a copy of the head
+        # and modify its role to include the 'pos' information
+        head_of_tree = tree['head'].copy()
+        head_of_tree['role'] += '[{}]'.format(tree['pos'])
         for child in tree['child']:
             if child==tree['head']:
-                continue
-            if 'term' in child: # it's a leaf node
-                if tree['head']['id'] < child['id']:
-                    yield tree['head'], child
+                continue    
+            if 'term' in child: # if child is a leaf node
+                if head_of_tree['id'] < child['id']:
+                    yield head_of_tree, child
                 else:
-                    yield child, tree['head']
+                    yield child, head_of_tree
             else:
                 head_of_child = child['head'].copy()
                 head_of_child['role'] = child['role']
-                if tree['head']['id'] < child['head']['id']:
-                    yield tree['head'], head_of_child
+                if head_of_tree['id'] < head_of_child['id']:
+                    yield head_of_tree, head_of_child
                 else:
-                    yield head_of_child, tree['head']
+                    yield head_of_child, head_of_tree
             for r1, r2 in get_relations(child):
                 yield r1, r2

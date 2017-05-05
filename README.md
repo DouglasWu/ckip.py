@@ -8,20 +8,20 @@ S(experiencer:NP(Head:Nhaa:我們)|quantity:Dab:都|Head:VK1:喜歡|goal:NP(prop
 You can extract the relations:
 ```
 experiencer Nhaa 我們
-Head VK1 喜歡
-----------------------------
+Head[S] VK1 喜歡
+---------------------------
 quantity Dab 都
-Head VK1 喜歡
-----------------------------
-Head VK1 喜歡
+Head[S] VK1 喜歡
+---------------------------
+Head[S] VK1 喜歡
 goal Nab 蝴蝶
-----------------------------
+---------------------------
 property VH11 美麗
-Head Nab 蝴蝶
-----------------------------
-head VH11 美麗
+Head[NP] Nab 蝴蝶
+---------------------------
+head[V•的] VH11 美麗
 Head DE 的
-----------------------------
+---------------------------
 ```
 
 ## Modifications
