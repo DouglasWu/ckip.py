@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals, print_function
-
-from ckip import CKIPParser
-
 def construct_parsing_tree(tree_text):
     parent_node = None
     current_node = {}
