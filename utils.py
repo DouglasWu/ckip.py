@@ -6,7 +6,6 @@ def construct_parsing_tree(tree_text):
 
     node_queue = []
     text = ''
-    is_head = False
     node_id = 0
 
     for char in tree_text:
@@ -22,14 +21,6 @@ def construct_parsing_tree(tree_text):
 
         elif char == ')' or char == '|':
             # end of the representation of a node
-            if is_head:
-                if 'head' in parent_node and parent_node['head']['role']=='head':
-                    # 'head' is more important than 'Head'
-                    pass
-                else:
-                    parent_node['head'] = current_node
-                is_head = False
-
             if len(text) > 0:
                 current_node['term'] = text
                 text = ''
@@ -43,15 +34,11 @@ def construct_parsing_tree(tree_text):
             else:
                 current_node = {}
 
-
         elif char == ':':
-            if text == 'Head' or text == 'head':
-                is_head = True
             if 'role' in current_node:
                 current_node['pos'] = text
             else:
                 current_node['role'] = text
-
             text = ''
 
         else:
@@ -59,23 +46,37 @@ def construct_parsing_tree(tree_text):
 
     return current_node
 
+def find_head(tree):
+    head = tree
+    if 'child' in tree:
+        headFound = False
+        for child in tree['child']:
+            if not headFound and (child['role']=='Head' or child['role']=='head'):
+                head = find_head(child)
+                headFound = True
+            elif headFound and child['role']=='head':
+                head = find_head(child)
+    return head
+
 def get_relations(tree):
     if 'child' in tree:
         # create a copy of the head
         # and modify its role to include the 'pos' information
-        head_of_tree = tree['head'].copy()
+        head_of_tree = find_head(tree).copy()
         head_of_tree['role'] += '[{}]'.format(tree['pos'])
         for child in tree['child']:
-            if child==tree['head']:
-                continue    
+            if child['id']==head_of_tree['id']:
+                continue
             if 'term' in child: # if child is a leaf node
                 if head_of_tree['id'] < child['id']:
                     yield head_of_tree, child
                 else:
                     yield child, head_of_tree
             else:
-                head_of_child = child['head'].copy()
+                head_of_child = find_head(child).copy()
                 head_of_child['role'] = child['role']
+                if head_of_child['id']==head_of_tree['id']:
+                    continue
                 if head_of_tree['id'] < head_of_child['id']:
                     yield head_of_tree, head_of_child
                 else:
