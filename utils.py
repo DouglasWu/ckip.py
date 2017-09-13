@@ -63,10 +63,12 @@ def get_dummies(node):
     dummy2 = {}
     for n in node['child']:
         if n['role']=='DUMMY1':
-            dummy1 = find_head(n).copy()
+            tmp = find_head(n)
+            dummy1 = tmp[0].copy()
         if n['role']=='DUMMY2':
-            dummy2 = find_head(n).copy()
-    return dummy1, dummy2
+            tmp = find_head(n)
+            dummy2 = tmp[0].copy()
+    return [dummy1, dummy2]
 
 # get the node information
 # of node with pos type PP or GP
@@ -84,26 +86,29 @@ def get_pp_gp_node(node, level=0):
         if n['role'] == 'DUMMY':
             head_of_dummy = find_head(n, level+1)
             break
-    head_of_node = find_tree_head(node).copy()
-    head_of_node['role'] = node['role']
-    term, pos = get_term_pos(head_of_node, head_of_dummy)
-    head_of_node['term'] = term
-    head_of_node['pos'] = pos
-    return head_of_node
+    nodes = []
+    for hd in head_of_dummy:
+        head_of_node = find_tree_head(node).copy()
+        head_of_node['role'] = node['role']
+        term, pos = get_term_pos(head_of_node, hd)
+        head_of_node['term'] = term
+        head_of_node['pos'] = pos
+        nodes.append(head_of_node)
+    
+    return nodes
 
-# choose the node that represents the child
+# Return a list of nodes that represents the child
+# When there are dummy1 and dummy2, it's a two-element list
+# otherwise it's a one-element list
 # 1. when there are dummies, return the heads of the two dummies
 # 2. when there's a DE, find head of the other child A and return A
 # 3. when it's a PP or GP, find the head of the DUMMY child A and return 在..A
 def find_head(tree, level=0):
-    head = tree
     if 'child' in tree:
+        head = []
         if has_dummies(tree):
             head = get_dummies(tree)
         else:
-            all_pos  = [child['pos'] for child in tree['child']]
-            all_role = [child['role'] for child in tree['child']]
-            
             for child in tree['child']:
                 if child['role']=='DUMMY':
                     if tree['pos'] in ['PP', 'GP']:
@@ -113,7 +118,7 @@ def find_head(tree, level=0):
                             head = find_head(child, level+1)
                         break
                 elif child['role']=='head':
-                    head = find_head(child)
+                    head = find_head(child, level+1)
                     break
                 elif child['role']=='Head':
                     if child['pos']=='DE': # find another node
@@ -123,19 +128,29 @@ def find_head(tree, level=0):
                                 break
                         break
                     elif tree['pos'] in ['PP', 'GP']:
-                        continue
-                    head = find_head(child, level+1)                    
-    return head
+                        # continue only if DUMMY is a child
+                        if 'DUMMY' in [node['role'] for node in tree['child']]:
+                            continue
+                    head = find_head(child, level+1)
+        if head==[]: # if no head found, choose the last node
+            head = find_head(tree['child'][-1], level+1)
+        return head
+    else:
+        return [tree]
 
 # find the head in the tree
 def find_tree_head(tree):
-    head = tree
     if 'child' in tree:
+        head = None
         for child in tree['child']:
             if child['role'] in ['head', 'Head']:
                 head = find_tree_head(child)
-    return head
-
+        if head==None:
+            # if no head found, choose the last node as head
+            head = find_tree_head(tree['child'][-1])
+        return head
+    else:
+        return tree
 
 def order_relation(node1, node2):
     if node1['id'] < node2['id']:
@@ -148,12 +163,13 @@ def get_relations_all(tree):
         # create a copy of the head
         # and modify its role to include the 'pos' information
         head_of_tree = find_tree_head(tree).copy()
-        head_of_tree['role'] += '[{}]'.format(tree['pos'])
+        if 'head' in head_of_tree['role'].lower():
+            head_of_tree['role'] += '[{}]'.format(tree['pos'])
         
         # get (dummy1, dummy2) relation
-        # when 'Caa' is the direct child of tree
-        poses = [child['pos'] for child in tree['child']]
-        if 'Caa' in poses:
+        # when (Head,'Caa') is the direct child of tree
+        tags = [(child['role'], child['pos']) for child in tree['child']]
+        if ('Head', 'Caa') in tags and has_dummies(tree):
             dummy1, dummy2 = get_dummies(tree)
             dummy1['role'] = 'DUMMY1'
             dummy2['role'] = 'DUMMY2'
@@ -165,17 +181,9 @@ def get_relations_all(tree):
                 if 'term' in child and head_of_tree['pos']!='Caa':
                     yield order_relation(head_of_tree, child)
                 elif head_of_tree['pos']!='Caa':
-                    # can be a tuple or a dict
-                    tmp = find_head(child)
-                    head_of_child = tmp if type(tmp)==tuple else tmp.copy()
-
-                    if type(head_of_child)==tuple:
-                        h1, h2 = head_of_child
-                        h1['role'] = child['role']
-                        h2['role'] = child['role']
-                        yield order_relation(head_of_tree, h1)
-                        yield order_relation(head_of_tree, h2)
-                    elif head_of_child['id']!=head_of_tree['id']:
+                    # get a list of nodes from find_head
+                    for node in find_head(child):
+                        head_of_child = node.copy()
                         head_of_child['role'] = child['role']
                         yield order_relation(head_of_tree, head_of_child)
             
